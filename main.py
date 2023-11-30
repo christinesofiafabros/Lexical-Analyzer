@@ -139,7 +139,7 @@ class Lexer:
                     tokens.append(Token(add_assgn))
                     self.advance()
                 else:
-                    tokens.append(Token(sub))
+                    tokens.append(Token(add))
                     self.advance()
             elif self.current_char == '-':
                 self.advance()
