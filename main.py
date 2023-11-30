@@ -1,3 +1,4 @@
+import re
 # CONSTANTS
 
 DIGITS = '0123456789'
@@ -5,7 +6,7 @@ UALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 LALPHA = UALPHA.lower()
 KEYWORDS = ['balik','bool','des','desimal', 'doble', 'int','integro','ipakita', 'kar','karakter', 'kundi', 'kung', 'pangungusap', 'para', 'pasok', 'tigil', 'walangbalik']
 RESWORDS = ['mali','magpatuloy','pumuntasa','simula', 'tama']
-
+ARITHMETIC_OP = []
 # ERRORS
 
 class Error:
@@ -94,6 +95,14 @@ m2_com = 'multi line comment closing'
 l_par = 'left parenthesis'
 r_par = 'right parenthesis'
 
+#delimeters
+semi_colon = 'semicolon'
+left_bracket = 'left bracket'
+right_bracket = 'right bracket'
+simula = 'simula'
+wakas = 'wakas'
+double_quotes = 'String'
+
 
 class Token:
     def __init__(self, type_, value=None):
@@ -139,7 +148,7 @@ class Lexer:
                     tokens.append(Token(add_assgn))
                     self.advance()
                 else:
-                    tokens.append(Token(sub))
+                    tokens.append(Token(add))  #napaltan ko
                     self.advance()
             elif self.current_char == '-':
                 self.advance()
@@ -172,10 +181,10 @@ class Lexer:
                     tokens.append(Token(div))
                     self.advance()
             elif self.current_char == '(':
-                tokens.append(Token(lpar))
+                tokens.append(Token(l_par))
                 self.advance()
             elif self.current_char == ')':
-                tokens.append(Token(rpar))
+                tokens.append(Token(r_par))
                 self.advance()
             elif self.current_char == '%':
                 tokens.append(Token(mod))
@@ -191,10 +200,27 @@ class Lexer:
                 else:
                     tokens.append(Token(assgn))
                     self.advance()
+            elif self.current_char == '#':
+                self.advance()
+                keyword = ''
+                while self.current_char is not None and (self.current_char in UALPHA or self.current_char in LALPHA):
+                    keyword += self.current_char
+                    self.advance()
+                if keyword.lower() == 'simula':
+                    tokens.append(Token('simula'))
+                elif keyword.lower() == 'wakas':
+                    tokens.append(Token('wakas'))
+                else:
+                    pos_start = self.pos.copy()
+                    char = self.current_char if self.current_char else ''  # Handle None case
+                    self.advance()
+                    return [], IllegalCharError(pos_start, self.pos, "'" + "Error delimeter" + "'")
             elif self.current_char == '~':
                 self.advance()
                 if self.current_char == '^':
                     tokens.append(Token(m2_com))
+                    while self.current_char and self.current_char != '\n':
+                        self.advance()
                     self.advance()
                 else:
                     tokens.append(Token(not_eq))
@@ -222,10 +248,36 @@ class Lexer:
                 self.advance()
                 if self.current_char == '~':
                     tokens.append(Token(m1_com))
-                    self.advance()
+                    # Ignore characters until '~^' for multi-line comments
+                    while self.current_char and not (self.current_char == '~' and self.peek() == '^'):
+                        self.advance()
+                    self.advance()  # Move past the closing '~'
+                    self.advance()  # Move past the '^'
                 else:
-                    tokens.append(Token(s_com))
+                    pos_start = self.pos.copy()
+                    char = self.current_char
+                    comment_text = ''
+                    while self.current_char and self.current_char != '\n':
+                        comment_text += self.current_char
+                        self.advance()
+                    tokens.append(Token(s_com, comment_text.strip()))
+            elif self.current_char == ';':
+                tokens.append(Token(semi_colon))
+                self.advance()
+            elif self.current_char == '[':
+                tokens.append(Token(left_bracket))
+                self.advance()
+            elif self.current_char == ']':
+                tokens.append(Token(right_bracket))
+                self.advance()
+            elif self.current_char == '"':
+                self.advance()
+                str_value = ''
+                while self.current_char and self.current_char != '"':
+                    str_value += self.current_char
                     self.advance()
+                tokens.append(Token(double_quotes, str_value))
+                self.advance()
             else:
                 pos_start = self.pos.copy()
                 char = self.current_char
@@ -251,19 +303,25 @@ class Lexer:
             return Token(inte, int(num_str))
         else:
             return Token(flt, float(num_str))
+        
 
     def str(self):
         str = ''
         while self.current_char != None and (self.current_char in UALPHA or self.current_char in LALPHA):
             str += self.current_char
             self.advance()
-        if str in KEYWORDS:
+        if str.lower() in ['imal', 'egro', 'akter']:
+            return Token('noise_word', str)
+        elif str in KEYWORDS:
             return Token('keyword', str)
         elif str in RESWORDS:
             return Token('reserved words', str)
         else:
             return Token('identifier', str)
 
+    def peek(self):
+        peek_idx = self.pos.idx + 1
+        return self.text[peek_idx] if peek_idx < len(self.text) else None
 
 # RUN
 
