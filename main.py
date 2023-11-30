@@ -6,6 +6,7 @@ UALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 LALPHA = UALPHA.lower()
 KEYWORDS = ['balik','bool','des','desimal', 'doble', 'int','integro','ipakita', 'kar','karakter', 'kundi', 'kung', 'pangungusap', 'para', 'pasok', 'tigil', 'walangbalik']
 RESWORDS = ['mali','magpatuloy','pumuntasa','simula', 'tama']
+NOISEWORDS = ['imal', 'egro', 'akter']
 ARITHMETIC_OP = []
 # ERRORS
 
@@ -315,7 +316,9 @@ class Lexer:
         elif str in KEYWORDS:
             return Token('keyword', str)
         elif str in RESWORDS:
-            return Token('reserved words', str)
+            return Token('reserved word', str)
+        elif str in NOISEWORDS:
+            return Token('noise word', str)
         else:
             return Token('identifier', str)
 
