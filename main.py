@@ -1,13 +1,16 @@
 import re
+
 # CONSTANTS
 
 DIGITS = '0123456789'
 UALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 LALPHA = UALPHA.lower()
-KEYWORDS = ['balik','bool','des','desimal', 'doble', 'int','integro','ipakita', 'kar','karakter', 'kundi', 'kung', 'pangungusap', 'para', 'pasok', 'tigil', 'walangbalik']
-RESWORDS = ['mali','magpatuloy','pumuntasa','simula', 'tama']
-NOISEWORDS = ['imal', 'egro', 'akter']
+KEYWORDS = ['balik', 'bool', 'des', 'desimal', 'doble', 'int', 'integro', 'ipakita', 'kar', 'karakter', 'kundi', 'kung',
+            'pangungusap', 'para', 'pasok', 'tigil', 'walangbalik']
+RESWORDS = ['mali', 'magpatuloy', 'pumuntasa', 'simula', 'tama']
 ARITHMETIC_OP = []
+
+
 # ERRORS
 
 class Error:
@@ -54,52 +57,53 @@ class Position:
 
 # TOKENS
 
-#arithmetic
+# arithmetic
 inte = 'int'
 flt = 'float'
-add = 'addition'
-sub = 'subtraction'
-mul = 'multiplication'
-div = 'division'
-mod = 'modulo'
-exp = 'exponent'
+add = '+'
+sub = '-'
+mul = '*'
+div = '/'
+mod = '%'
+exp = ':'
 
-#relational
-eq_to = 'equal to'
-not_eq = 'not'
-l_than = 'less than'
-l_eq = 'less than/equal to'
-g_than = 'greater than'
-g_eq = 'greater than/equal to'
+# relational
+eq_to = '=='
+not_eq = '!='
+l_than = '<'
+l_eq = '<='
+g_than = '>'
+g_eq = '>='
 
-#logical
-l_and = 'and'
-l_or = 'or'
+# logical
+l_and = '@'
+l_or = '//'
+nt = '~'
 
-#assignment
-assgn = 'assignment'
-add_assgn = 'addition assignment'
-sub_assgn = 'subtraction assignment'
-mul_assgn = 'multiplication assignment'
-div_assgn = 'division assignment'
+# assignment
+assgn = '='
+add_assgn = '+='
+sub_assgn = '-='
+mul_assgn = '*='
+div_assgn = '/='
 
-#unary
-inc = 'increment'
-dec = 'decrement'
+# unary
+inc = '++'
+dec = '--'
 
-#comments
-s_com = 'single line comment'
-m1_com = 'multi line comment opening'
-m2_com = 'multi line comment closing'
+# comments
+s_com = '^'
+m_com_open = '^~'
+m_com_close = '~^'
 
-#delimeters
-l_par = 'left parenthesis'
-r_par = 'right parenthesis'
+# delimiters
+l_par = '('
+r_par = ')'
 
-#delimeters
-semi_colon = 'semicolon'
-left_bracket = 'left bracket'
-right_bracket = 'right bracket'
+# delimiters
+semi_colon = ';'
+left_bracket = '['
+right_bracket = ']'
 simula = 'simula'
 wakas = 'wakas'
 double_quotes = 'String'
@@ -149,7 +153,7 @@ class Lexer:
                     tokens.append(Token(add_assgn))
                     self.advance()
                 else:
-                    tokens.append(Token(add))  #napaltan ko
+                    tokens.append(Token(add))  # napaltan ko
                     self.advance()
             elif self.current_char == '-':
                 self.advance()
@@ -215,11 +219,11 @@ class Lexer:
                     pos_start = self.pos.copy()
                     char = self.current_char if self.current_char else ''  # Handle None case
                     self.advance()
-                    return [], IllegalCharError(pos_start, self.pos, "'" + "Error delimeter" + "'")
+                    return [], IllegalCharError(pos_start, self.pos, "'" + "Error delimiter" + "'")
             elif self.current_char == '~':
                 self.advance()
                 if self.current_char == '^':
-                    tokens.append(Token(m2_com))
+                    tokens.append(Token(m_com_close))
                     while self.current_char and self.current_char != '\n':
                         self.advance()
                     self.advance()
@@ -235,20 +239,20 @@ class Lexer:
                     tokens.append(Token(l_than))
                     self.advance()
             elif self.current_char == '>':
+                self.advance()
+                if self.current_char == '=':
+                    tokens.append(Token(g_eq))
                     self.advance()
-                    if self.current_char == '=':
-                        tokens.append(Token(g_eq))
-                        self.advance()
-                    else:
-                        tokens.append(Token(g_than))
-                        self.advance()
+                else:
+                    tokens.append(Token(g_than))
+                    self.advance()
             elif self.current_char == '@':
                 tokens.append(Token(l_and))
                 self.advance()
             elif self.current_char == '^':
                 self.advance()
                 if self.current_char == '~':
-                    tokens.append(Token(m1_com))
+                    tokens.append(Token(m_com_open))
                     # Ignore characters until '~^' for multi-line comments
                     while self.current_char and not (self.current_char == '~' and self.peek() == '^'):
                         self.advance()
@@ -301,10 +305,9 @@ class Lexer:
             self.advance()
 
         if dot_count == 0:
-            return Token(inte, int(num_str))
+            return Token('int', int(num_str))
         else:
-            return Token(flt, float(num_str))
-        
+            return Token('float', float(num_str))
 
     def str(self):
         str = ''
@@ -312,19 +315,18 @@ class Lexer:
             str += self.current_char
             self.advance()
         if str.lower() in ['imal', 'egro', 'akter']:
-            return Token('noise_word', str)
+            return Token('noise word', str)
         elif str in KEYWORDS:
             return Token('keyword', str)
         elif str in RESWORDS:
             return Token('reserved word', str)
-        elif str in NOISEWORDS:
-            return Token('noise word', str)
         else:
             return Token('identifier', str)
 
     def peek(self):
         peek_idx = self.pos.idx + 1
         return self.text[peek_idx] if peek_idx < len(self.text) else None
+
 
 # RUN
 
@@ -333,3 +335,73 @@ def run(fn, text):
     tokens, error = lexer.make_tokens()
 
     return tokens, error
+
+def generate_symbol_table(tokens):
+    symbol_table = {}
+
+    for token in tokens:
+        if (token.type == 'identifier' or token.type == 'keyword' or token.type == 'reserved word' or
+                token.type == 'noise word'):
+            lexeme = token.value
+            token_type = token.type
+            if lexeme not in symbol_table:
+                symbol_table[lexeme] = token_type
+            else:
+                symbol_table[lexeme] += f', {token_type}'
+        elif token.type == 'int' or token.type == 'float':
+            lexeme = str(token.value)
+            token_type = token.type
+            if lexeme not in symbol_table:
+                symbol_table[lexeme] = token_type
+            else:
+                symbol_table[lexeme] += f', {token_type}'
+        elif token.type in ['+', '-', '*', '/', '%', ':']:
+            lexeme = token.type
+            token_type = 'arithmetic operator'
+            if lexeme not in symbol_table:
+                symbol_table[lexeme] = token_type
+            else:
+                symbol_table[lexeme] += f', {token_type}'
+        elif token.type in ['==', '<=', '<=', '>',
+                            '>=']:
+            lexeme = token.type
+            token_type = 'relational operator'
+            if lexeme not in symbol_table:
+                symbol_table[lexeme] = token_type
+            else:
+                symbol_table[lexeme] += f', {token_type}'
+        elif token.type in ['and', 'or', 'not']:
+            lexeme = token.type
+            token_type = 'logical operator'
+            if lexeme not in symbol_table:
+                symbol_table[lexeme] = token_type
+            else:
+                symbol_table[lexeme] += f', {token_type}'
+        elif token.type in ['=', '+=', '-=', '*=',
+                            '/=']:
+            lexeme = token.type
+            token_type = 'assignment operator'
+            if lexeme not in symbol_table:
+                symbol_table[lexeme] = token_type
+            else:
+                symbol_table[lexeme] += f', {token_type}'
+        elif token.type in ['++', '--']:
+            lexeme = token.type
+            token_type = 'unary operator'
+            if lexeme not in symbol_table:
+                symbol_table[lexeme] = token_type
+            else:
+                symbol_table[lexeme] += f', {token_type}'
+
+        # Add other token types as needed following a similar pattern
+
+    return symbol_table
+
+
+def visualize_symbol_table(symbol_table, file_name):
+    with open(file_name, 'w') as file:
+        file.write("Lexeme\t\t\tToken\n")  # Writing headers to the file
+
+        # Write lexemes and tokens into the file in a tabular format
+        for lexeme, token in symbol_table.items():
+            file.write(f"{lexeme.ljust(15)}\t{token}\n")
